@@ -42,8 +42,7 @@ class RouletteTracker:
             "prediction": self.predictions.copy(),
             "spin_result": spin_result,
             "outcome": "Win" if is_win else "Loss",
-            "balance": self.balance
-        }
+            "balance": self.balance}
         self.history.append(log_entry)
 
         print(f"\n🎲 Spin Result: {spin_result} → {outcome_text}")
