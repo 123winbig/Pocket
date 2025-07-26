@@ -104,22 +104,4 @@ hit_rate = (st.session_state["wins"] / total_preds) * 100 if total_preds else 0
 
 st.metric("Total Spins", total_spins)
 st.metric("Predictions Made", total_preds)
-st.metric("Hit Rate", f"{hit_rate:.1f}%")
-st.metric("Current Streak", st.session_state["streak"])
-st.metric("Longest Streak", st.session_state["max_streak"])
-st.metric("Balance", f"{st.session_state['balance']} units")
-
-# 🧾 Toggle spin history
-with st.expander("📜 View Session History"):
-    df = pd.DataFrame(st.session_state["history"])
-    if not df.empty:
-        st.dataframe(df)
-    else:
-        st.caption("Session just getting started!")
-
-# 🔄 Reset
-    if st.button("🔄 Reset Session"):
-    # Clear session state
-    for key in st.session_state.keys():
-        st.session_state[key] = [] if isinstance(st.session_state[key], list) else 0
-    st.success("Session cleared. Ready for a fresh strategy round!")
+st.metric("Hit Rate)
