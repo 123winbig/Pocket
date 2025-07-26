@@ -119,3 +119,7 @@ with st.expander("📜 View Session History"):
 
 # 🔄 Reset
     if st.button("🔄 Reset Session"):
+    # Clear session state
+    for key in st.session_state.keys():
+        st.session_state[key] = [] if isinstance(st.session_state[key], list) else 0
+    st.success("Session cleared. Ready for a fresh strategy round!")
