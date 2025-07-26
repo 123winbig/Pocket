@@ -104,4 +104,4 @@ hit_rate = (st.session_state["wins"] / total_preds) * 100 if total_preds else 0
 
 st.metric("Total Spins", total_spins)
 st.metric("Predictions Made", total_preds)
-st.metric("Hit Rate
+st.metric("Hit Rate", f"{hit_rate:.1f}%")
