@@ -118,4 +118,4 @@ with st.expander("📜 View Session History"):
         st.caption("Session just getting started!")
 
 # 🔄 Reset
-if st.button("🔄 Reset Session):
+    if st.button("🔄 Reset Session"):
