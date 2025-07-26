@@ -1,124 +1,8 @@
-import datetime
 import streamlit as st
 import pandas as pd
+import datetime
 
-# Initialize session state
-if "spins" not in st.session_state:
-    st.session_state.spins = []
-if "balance" not in st.session_state:
-    st.session_state.balance = 0
-    import datetime
-
-class RouletteTracker:
-    def __init__(self):
-        self.predictions = []
-        self.balance = 0
-        self.total_spins = 0
-        self.total_wins = 0
-        self.win_streak = 0
-        self.max_win_streak = 0
-        self.history = []
-
-    def make_prediction(self, numbers):
-        self.predictions = numbers
-        print(f"🔮 Predicted Numbers: {', '.join(map(str, self.predictions))}")
-
-    def check_outcome(self, spin_result):
-        self.total_spins += 1
-        is_win = spin_result in self.predictions
-
-        if is_win:
-            self.balance += 36
-            self.total_wins += 1
-            self.win_streak += 1
-            self.max_win_streak = max(self.max_win_streak, self.win_streak)
-            outcome_text = f"✅ Win! +36 units"
-        else:
-            self.balance -= len(self.predictions)
-            self.win_streak = 0
-            outcome_text = f"❌ Loss. -{len(self.predictions)} units"
-
-        log_entry = {
-            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "prediction": self.predictions.copy(),
-            "spin_result": spin_result,
-            "outcome": "Win" if is_win else "Loss",
-            "balance": self.balance}
-        self.history.append(log_entry)
-
-        print(f"\n🎲 Spin Result: {spin_result} → {outcome_text}")
-        self.display_stats()
-
-    def display_stats(self):
-        hit_rate = (self.total_wins / self.total_spins) * 100 if self.total_spins else 0
-        print(f"\n📊 STATS:")
-        print(f"🔢 Total Spins: {self.total_spins}")
-        print(f"✅ Total Wins: {self.total_wins}")
-        print(f"📈 Hit Rate: {hit_rate:.2f}%")
-        print(f"🔥 Current Streak: {self.win_streak}")
-        print(f"🥇 Longest Streak: {self.max_win_streak}")
-        print(f"💰 Balance: {self.balance} units")
-
-    def show_history(self):
-        print("\n🕘 Spin History:")
-        for idx, entry in enumerate(self.history, start=1):
-            print(f"{idx}. {entry['time']} → 🎯 Predicted: {entry['prediction']}, "
-                  f"Spun: {entry['spin_result']}, Outcome: {entry['outcome']}, "
-                  f"Balance: {entry['balance']} units")
-
-# Example usage
-if __name__ == "__main__":
-    game = RouletteTracker()
-
-    # Example play session
-    game.make_prediction([24, 16, 1, 20, 4, 19, 33, 36])
-    game.check_outcome(0)
-    game.check_outcome(33)
-    game.make_prediction([7, 12, 18])
-    game.check_outcome(12)
-
-    game.show_history()
-
-# Title and Introduction
-st.title("🎰 Roulette Tracker")
-st.markdown("Log your spins, track your balance, and see what might be next!")
-
-# Input Section
-spin = st.number_input("🎯 Enter spin result (0–36):", min_value=0, max_value=36, step=1)
-bet = st.number_input("💰 Bet amount:", min_value=0)
-outcome = st.radio("🔁 Result:", ["Win", "Lose"])
-
-# Log spin on button click
-if st.button("Log Spin"):
-    st.session_state.spins.append(spin)
-    if outcome == "Win":
-        st.session_state.balance += bet
-    else:
-        st.session_state.balance -= bet
-    st.success(f"Spin {spin} logged! Current balance: €{st.session_state.balance}")
-
-# Display logged spins
-if st.session_state.spins:
-    st.subheader("🧾 Spin History")
-    df = pd.DataFrame({
-        "Spin #": list(range(1, len(st.session_state.spins)+1)),
-        "Number": st.session_state.spins
-    })
-    st.dataframe(df)
-
-    # Basic prediction logic — show most frequent recent numbers
-    st.subheader("🔮 Prediction Insights")
-    counts = pd.Series(st.session_state.spins).value_counts().head(5)
-    st.write("Most frequent spins:")
-    st.bar_chart(counts)
-
-# Reset option
-if st.button("Reset App"):
-    st.session_state.spins = []
-    st.session_state.balance = 0
-    st.info("Session reset.")
-
-# 🔁 European wheel in physical layout
+# 🎡 European wheel physical layout
 wheel_order = [
     0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13,
     36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14,
@@ -126,103 +10,112 @@ wheel_order = [
 ]
 
 # 🧠 Session state setup
-if "spins" not in st.session_state:
-    st.session_state.spins = []
-if "predictions" not in st.session_state:
-    st.session_state.predictions = []
-if "balance" not in st.session_state:
-    st.session_state.balance = None
-if "outcomes" not in st.session_state:
-    st.session_state.outcomes = []
+for key in ["spins", "predictions", "balance", "history", "wins", "losses", "streak", "max_streak"]:
+    if key not in st.session_state:
+        st.session_state[key] = [] if key in ["spins", "predictions", "history"] else 0
 
-# 🔧 Logic helpers
+# 🔧 Logic functions
 def get_neighbors(num):
-    idx = wheel_order.index(num)
+    i = wheel_order.index(num)
     return [
-        wheel_order[(idx - 2) % len(wheel_order)],
-        wheel_order[(idx - 1) % len(wheel_order)],
-        wheel_order[(idx + 1) % len(wheel_order)],
-        wheel_order[(idx + 2) % len(wheel_order)],
-        wheel_order[(idx - 18) % len(wheel_order)],
-        wheel_order[(idx + 18) % len(wheel_order)]
+        wheel_order[(i - 2) % len(wheel_order)],
+        wheel_order[(i - 1) % len(wheel_order)],
+        wheel_order[(i + 1) % len(wheel_order)],
+        wheel_order[(i + 2) % len(wheel_order)],
+        wheel_order[(i - 18) % len(wheel_order)],
+        wheel_order[(i + 18) % len(wheel_order)]
     ]
 
 def get_hot(spins):
-    freq = {num: spins.count(num) for num in set(spins)}
-    return max(freq, key=freq.get)
+    freq = pd.Series(spins).value_counts()
+    return freq.idxmax() if not freq.empty else None
 
 def get_trend(spins):
     if len(spins) < 3:
         return None
-    last_idxs = [wheel_order.index(s) for s in spins[-3:]]
-    avg_idx = int(sum(last_idxs) / 3)
-    return wheel_order[avg_idx]
+    indices = [wheel_order.index(s) for s in spins[-3:]]
+    return wheel_order[int(sum(indices) / len(indices))]
 
-def predict_next(spins):
-    last = spins[-1]
-    base = get_neighbors(last)
+def predict(spins):
+    base = get_neighbors(spins[-1])
     hot = get_hot(spins)
     trend = get_trend(spins)
-    result = list(dict.fromkeys(base + [hot] + ([trend] if trend else [])))
-    return result[:8]
+    return list(dict.fromkeys(base + [hot] + ([trend] if trend else [])))[:8]
 
-# 🖼️ UI Section
+# 🎯 UI
 st.markdown("<h4 style='text-align:center;'>108Spin Predictor</h4>", unsafe_allow_html=True)
-st.caption("⚙️ European Wheel | Strategy Mode | Predictive Tracker")
+st.caption("🧠 European Strategy • Unit-Based • Prediction Tracker")
 
-# 🎯 Balance Input
-if st.session_state.balance is None:
-    starting = st.number_input("Enter starting balance (units)", min_value=1, step=1)
-    if st.button("Set Balance"):
-        st.session_state.balance = starting
-        st.success(f"🔢 Starting balance set to {starting} units.")
+# 💰 Balance setup
+if st.session_state["balance"] == 0:
+    starting = st.number_input("Set starting balance (units)", min_value=1, step=1)
+    if st.button("💳 Set Balance"):
+        st.session_state["balance"] = starting
+        st.success(f"🔢 Starting balance: {starting} units")
 
-# 🔄 Spin Logging
-if st.session_state.balance is not None and len(st.session_state.spins) < 108:
-    new_spin = st.number_input("Enter new spin (0–36)", min_value=0, max_value=36, step=1)
-    if st.button("Log Spin"):
-        st.session_state.spins.append(new_spin)
-        spin_num = len(st.session_state.spins)
-        st.success(f"🎯 Spin {spin_num}: {new_spin} logged.")
+# 🎰 Spin input
+if st.session_state["balance"] > 0 and len(st.session_state["spins"]) < 108:
+    new_spin = st.number_input("Enter spin result (0–36)", min_value=0, max_value=36, step=1)
+    if st.button("🎯 Log Spin", key="log_spin"):
+        st.session_state["spins"].append(new_spin)
+        st.success(f"Spin {len(st.session_state.spins)} logged: {new_spin}")
 
-        if spin_num >= 12:
-            prediction = predict_next(st.session_state.spins)
-            st.session_state.predictions.append(prediction)
-            st.info(f"🔮 Suggested bet for Spin {spin_num + 1}: {prediction}")
-
-# 💰 Outcome Tracker
-if len(st.session_state.predictions) > 0:
-    st.subheader("💸 Outcome Logging")
-    last_prediction = st.session_state.predictions[-1]
-    result_spin = st.number_input("Enter result of predicted spin", min_value=0, max_value=36, step=1)
-    if st.button("Check Outcome"):
-        if result_spin in last_prediction:
-            win_amount = 36  # payout for 1 unit straight bet
-            st.session_state.balance += win_amount
-            st.session_state.outcomes.append(("Win", result_spin, st.session_state.balance))
-            st.success(f"✅ WIN! Balance now: {st.session_state.balance} units")
+        if len(st.session_state["spins"]) >= 12:
+            prediction = predict(st.session_state["spins"])
+            st.session_state["predictions"].append(prediction)
+            st.info(f"🔮 Suggested numbers for next spin: {prediction}")
         else:
-            loss_amount = len(last_prediction)  # assume 1 unit per number
-            st.session_state.balance -= loss_amount
-            st.session_state.outcomes.append(("Loss", result_spin, st.session_state.balance))
-            st.error(f"❌ Loss. Balance now: {st.session_state.balance} units")
+            st.warning(f"Waiting for {12 - len(st.session_state.spins)} more spins...")
 
-# 📦 Session Summary
-if st.session_state.balance is not None:
-    st.markdown("---")
-    st.subheader("📈 Current Session")
-    st.metric("Spins Logged", len(st.session_state.spins))
-    st.metric("Predictions Made", len(st.session_state.predictions))
-    st.metric("Balance", f"{st.session_state.balance} units")
+# 🎲 Outcome checker
+if st.session_state["predictions"]:
+    result_spin = st.number_input("Check outcome: Enter spin after prediction", min_value=0, max_value=36, step=1)
+    if st.button("✅ Evaluate Spin", key="evaluate"):
+        latest_prediction = st.session_state["predictions"][-1]
+        is_win = result_spin in latest_prediction
 
-# 🧼 Reset Button
-if st.button("🔄 Reset Entire Session"):
-    st.session_state.spins = []
-    st.session_state.predictions = []
-    st.session_state.balance = None
-    st.session_state.outcomes = []
-    st.warning("Session reset. Ready to start fresh!")
+        if is_win:
+            st.session_state["balance"] += 36
+            st.session_state["wins"] += 1
+            st.session_state["streak"] += 1
+            st.session_state["max_streak"] = max(st.session_state["streak"], st.session_state["max_streak"])
+            st.success(f"🎉 WIN! +36 units → Balance: {st.session_state['balance']} units")
+        else:
+            cost = len(latest_prediction)
+            st.session_state["balance"] -= cost
+            st.session_state["losses"] += 1
+            st.session_state["streak"] = 0
+            st.error(f"❌ Missed. -{cost} units → Balance: {st.session_state['balance']} units")
 
-# 🛑 Session Cap
-if len(st.session_state.spins) >= 108:
-    st.success("✅ 108 spins completed! Session full.")
+        st.session_state["history"].append({
+            "spin": result_spin,
+            "predicted": latest_prediction,
+            "outcome": "Win" if is_win else "Loss",
+            "balance": st.session_state["balance"],
+            "timestamp": datetime.datetime.now().strftime("%H:%M:%S")
+        })
+
+# 📈 Stats
+st.markdown("---")
+st.subheader("📊 Session Stats")
+total_spins = len(st.session_state["spins"])
+total_preds = len(st.session_state["predictions"])
+hit_rate = (st.session_state["wins"] / total_preds) * 100 if total_preds else 0
+
+st.metric("Total Spins", total_spins)
+st.metric("Predictions Made", total_preds)
+st.metric("Hit Rate", f"{hit_rate:.1f}%")
+st.metric("Current Streak", st.session_state["streak"])
+st.metric("Longest Streak", st.session_state["max_streak"])
+st.metric("Balance", f"{st.session_state['balance']} units")
+
+# 🧾 Toggle spin history
+with st.expander("📜 View Session History"):
+    df = pd.DataFrame(st.session_state["history"])
+    if not df.empty:
+        st.dataframe(df)
+    else:
+        st.caption("Session just getting started!")
+
+# 🔄 Reset
+if st.button("🔄 Reset Session
