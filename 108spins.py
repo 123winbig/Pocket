@@ -1,6 +1,51 @@
 import streamlit as st
 import pandas as pd
 
+# Initialize session state
+if "spins" not in st.session_state:
+    st.session_state.spins = []
+if "balance" not in st.session_state:
+    st.session_state.balance = 0
+
+# Title and Introduction
+st.title("🎰 Roulette Tracker")
+st.markdown("Log your spins, track your balance, and see what might be next!")
+
+# Input Section
+spin = st.number_input("🎯 Enter spin result (0–36):", min_value=0, max_value=36, step=1)
+bet = st.number_input("💰 Bet amount:", min_value=0)
+outcome = st.radio("🔁 Result:", ["Win", "Lose"])
+
+# Log spin on button click
+if st.button("Log Spin"):
+    st.session_state.spins.append(spin)
+    if outcome == "Win":
+        st.session_state.balance += bet
+    else:
+        st.session_state.balance -= bet
+    st.success(f"Spin {spin} logged! Current balance: €{st.session_state.balance}")
+
+# Display logged spins
+if st.session_state.spins:
+    st.subheader("🧾 Spin History")
+    df = pd.DataFrame({
+        "Spin #": list(range(1, len(st.session_state.spins)+1)),
+        "Number": st.session_state.spins
+    })
+    st.dataframe(df)
+
+    # Basic prediction logic — show most frequent recent numbers
+    st.subheader("🔮 Prediction Insights")
+    counts = pd.Series(st.session_state.spins).value_counts().head(5)
+    st.write("Most frequent spins:")
+    st.bar_chart(counts)
+
+# Reset option
+if st.button("Reset App"):
+    st.session_state.spins = []
+    st.session_state.balance = 0
+    st.info("Session reset.")
+
 # 🔁 European wheel in physical layout
 wheel_order = [
     0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13,
