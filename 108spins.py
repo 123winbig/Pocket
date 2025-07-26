@@ -1,99 +1,78 @@
-# simulator.py
-
-import streamlit as st
 import random
 
-# 🎲 Simulation Parameters
-DEFAULT_BANKROLL = 1000
-MAX_EXPOSURE = 500
-BET_LEVELS = [1, 2, 3, 5, 7]
+# European roulette wheel in physical wheel order
+wheel_order = [
+    0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13,
+    36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14,
+    31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
+]
 
-# 🔧 Core Functions
-def get_hot_number(results):
-    return max(set(results), key=results.count)
+# Store spins and predictions
+spins = []
+predictions = []
 
-def get_trend_number(results):
-    return sum(results[-5:]) // 5 if len(results) >= 5 else random.randint(0, 36)
+# Helper to get geometric neighbors
+def get_neighbors(num):
+    idx = wheel_order.index(num)
+    neighbors = [
+        wheel_order[(idx - 2) % len(wheel_order)],
+        wheel_order[(idx - 1) % len(wheel_order)],
+        wheel_order[(idx + 1) % len(wheel_order)],
+        wheel_order[(idx + 2) % len(wheel_order)],
+        wheel_order[(idx - 18) % len(wheel_order)],
+        wheel_order[(idx + 18) % len(wheel_order)]
+    ]
+    return neighbors
 
-def get_bet_numbers(result_history):
-    core = []
-    last = result_history[-1] if result_history else 18
-    core += [(last + offset) % 37 for offset in [-2, -1, 1, 2, -18, 18]]
-    hot = get_hot_number(result_history) if result_history else 18
-    trend = get_trend_number(result_history) if result_history else 18
-    return list(set(core + [hot, trend]))[:8]
+# Hot number logic
+def get_hot(spins):
+    freq = {num: spins.count(num) for num in set(spins)}
+    return max(freq, key=freq.get)
 
-def run_simulation(spin_data):
-    bankroll = DEFAULT_BANKROLL
-    history = []
-    wins = 0
-    units_won = 0
-    units_lost = 0
-    loss_streak = 0
-    max_drawdown = 0
+# Trend logic (based on average movement)
+def get_trend(spins):
+    if len(spins) < 3:
+        return None
+    last_idxs = [wheel_order.index(s) for s in spins[-3:]]
+    avg_idx = int(sum(last_idxs) / 3)
+    return wheel_order[avg_idx]
 
-    for i, spin in enumerate(spin_data):
-        bet_level = BET_LEVELS[min(loss_streak, len(BET_LEVELS) - 1)]
-        numbers = get_bet_numbers(history)
-        total_bet = bet_level * len(numbers)
+# Main prediction engine
+def predict_next(spins):
+    last = spins[-1]
+    base_numbers = get_neighbors(last)
+    hot = get_hot(spins)
+    trend = get_trend(spins)
+    suggested = base_numbers + [hot]
+    if trend:
+        suggested.append(trend)
+    return list(dict.fromkeys(suggested))[:8]
 
-        if bankroll - total_bet < (DEFAULT_BANKROLL - MAX_EXPOSURE):
-            break  # Exposure limit hit
+# User-driven spin logging
+def log_spin(num):
+    if num not in wheel_order:
+        print(f"Invalid number: {num}")
+        return
+    spins.append(num)
+    print(f"Logged Spin {len(spins)} → {num}")
+    if len(spins) >= 12:
+        bet = predict_next(spins)
+        predictions.append(bet)
+        print(f"🔮 Suggested Bet for Spin {len(spins)+1}: {bet}")
+    else:
+        print(f"🕒 Waiting for 12 spins... ({12 - len(spins)} to go)")
 
-        if spin in numbers:
-            win_amount = bet_level * 36
-            bankroll += win_amount
-            units_won += win_amount
-            loss_streak = 0
-            wins += 1
-        else:
-            bankroll -= total_bet
-            units_lost += total_bet
-            loss_streak += 1
+# Optional simulator
+def simulate_session():
+    for _ in range(108):
+        next_spin = random.choice(wheel_order)
+        log_spin(next_spin)
 
-        drawdown = DEFAULT_BANKROLL - bankroll
-        if drawdown > max_drawdown:
-            max_drawdown = drawdown
-
-        history.append(spin)
-
-    return {
-        'final_bankroll': bankroll,
-        'win_rate': f"{(wins/len(history))*100:.1f}%",
-        'units_won': units_won,
-        'units_lost': units_lost,
-        'drawdown': max_drawdown,
-        'hot_efficiency': f"{get_hot_number(history)}",
-        'trend_efficiency': f"{get_trend_number(history)}",
-        'spins_run': len(history)
-    }
-
-# 🖥️ Streamlit UI
-st.set_page_config(page_title="Roulette Simulator", layout="centered")
-st.title("🎰 Roulette Strategy Simulator")
-st.caption("Powered by custom logic + betting progression")
-
-spin_input = st.text_area("Enter 108 spin results separated by commas (e.g. 12,34,7,...)", height=150)
-
-if spin_input:
-    try:
-        spin_data = [int(n.strip()) % 37 for n in spin_input.split(",") if n.strip().isdigit()]
-        if len(spin_data) < 20:
-            st.warning("Please enter at least 20 spins for meaningful simulation.")
-        else:
-            result = run_simulation(spin_data)
-
-            st.subheader("📊 Simulation Results")
-            st.metric("Final Bankroll", f"{result['final_bankroll']} units")
-            st.metric("Win Rate", result['win_rate'])
-            st.metric("Units Won", result['units_won'])
-            st.metric("Units Lost", result['units_lost'])
-            st.metric("Max Drawdown", f"{result['drawdown']} units")
-            st.metric("Hot Number Selected", result['hot_efficiency'])
-            st.metric("Trend Number Avg", result['trend_efficiency'])
-            st.metric("Total Spins Simulated", result['spins_run'])
-
-    except Exception as e:
-        st.error(f"Error parsing input: {e}")
-else:
-    st.info("Paste 108 numbers and click run to simulate your strategy!")
+# Run interactively (example)
+if __name__ == "__main__":
+    while len(spins) < 108:
+        try:
+            entry = input(f"Enter Spin {len(spins)+1} (0–36): ")
+            log_spin(int(entry))
+        except ValueError:
+            print("⚠️ Please enter a valid number.")
