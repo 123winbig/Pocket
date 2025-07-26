@@ -6,6 +6,78 @@ if "spins" not in st.session_state:
     st.session_state.spins = []
 if "balance" not in st.session_state:
     st.session_state.balance = 0
+    import datetime
+
+class RouletteTracker:
+    def __init__(self):
+        self.predictions = []
+        self.balance = 0
+        self.total_spins = 0
+        self.total_wins = 0
+        self.win_streak = 0
+        self.max_win_streak = 0
+        self.history = []
+
+    def make_prediction(self, numbers):
+        self.predictions = numbers
+        print(f"🔮 Predicted Numbers: {', '.join(map(str, self.predictions))}")
+
+    def check_outcome(self, spin_result):
+        self.total_spins += 1
+        is_win = spin_result in self.predictions
+
+        if is_win:
+            self.balance += 36
+            self.total_wins += 1
+            self.win_streak += 1
+            self.max_win_streak = max(self.max_win_streak, self.win_streak)
+            outcome_text = f"✅ Win! +36 units"
+        else:
+            self.balance -= len(self.predictions)
+            self.win_streak = 0
+            outcome_text = f"❌ Loss. -{len(self.predictions)} units"
+
+        log_entry = {
+            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "prediction": self.predictions.copy(),
+            "spin_result": spin_result,
+            "outcome": "Win" if is_win else "Loss",
+            "balance": self.balance
+        }
+        self.history.append(log_entry)
+
+        print(f"\n🎲 Spin Result: {spin_result} → {outcome_text}")
+        self.display_stats()
+
+    def display_stats(self):
+        hit_rate = (self.total_wins / self.total_spins) * 100 if self.total_spins else 0
+        print(f"\n📊 STATS:")
+        print(f"🔢 Total Spins: {self.total_spins}")
+        print(f"✅ Total Wins: {self.total_wins}")
+        print(f"📈 Hit Rate: {hit_rate:.2f}%")
+        print(f"🔥 Current Streak: {self.win_streak}")
+        print(f"🥇 Longest Streak: {self.max_win_streak}")
+        print(f"💰 Balance: {self.balance} units")
+
+    def show_history(self):
+        print("\n🕘 Spin History:")
+        for idx, entry in enumerate(self.history, start=1):
+            print(f"{idx}. {entry['time']} → 🎯 Predicted: {entry['prediction']}, "
+                  f"Spun: {entry['spin_result']}, Outcome: {entry['outcome']}, "
+                  f"Balance: {entry['balance']} units")
+
+# Example usage
+if __name__ == "__main__":
+    game = RouletteTracker()
+
+    # Example play session
+    game.make_prediction([24, 16, 1, 20, 4, 19, 33, 36])
+    game.check_outcome(0)
+    game.check_outcome(33)
+    game.make_prediction([7, 12, 18])
+    game.check_outcome(12)
+
+    game.show_history()
 
 # Title and Introduction
 st.title("🎰 Roulette Tracker")
